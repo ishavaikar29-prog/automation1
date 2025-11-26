@@ -1,0 +1,43 @@
+name: Daily Report
+
+on:
+  schedule:
+    - cron: "30 19 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: string
+        required: false
+      emails:
+        type: string
+        required: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - run: python report_parent.py
+        env:
+          RECIPIENTS_JSON: ${{ secrets.RECIPIENTS_JSON }}
+          MODE: ${{ github.event.inputs.mode }}
+          EMAILS: ${{ github.event.inputs.emails }}
+
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs
+          path: run.log
