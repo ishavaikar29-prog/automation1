@@ -2,10 +2,15 @@
 
 import os
 import json
+from datetime import datetime
+
 from api_client import fetch_json, API_USERS, API_POSTS, API_TODOS
 from excel_builder import build_excel
 from email_sender import send_email
 from error_handler import init_logger
+
+from success_body import success_message
+from failure_body import failure_message
 
 logger = init_logger()
 
@@ -23,10 +28,19 @@ def pick_recipients(all_rec, mode, emails):
             if p not in all_rec:
                 raise ValueError(f"Invalid email: {p}")
         return parts
+
     raise ValueError("Invalid mode")
 
 def main():
-    logger.info("Run started")
+    logger.info("==== RUN START ====")
+
+    timestamp = datetime.utcnow().isoformat() + "Z"
+
+    # -------------- ADMIN EMAIL --------------
+    ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+    if not ADMIN_EMAIL:
+        logger.error("ADMIN_EMAIL is missing")
+        return
 
     # Recipients from secret
     recipients_json = os.getenv("RECIPIENTS_JSON")
@@ -37,54 +51,80 @@ def main():
     recipients = pick_recipients(all_recipients, mode, emails)
 
     # Fetch APIs
+    failures = []
     try:
         users = fetch_json(API_USERS)
+    except Exception as e:
+        failures.append(("users", str(e)))
+
+    try:
         posts = fetch_json(API_POSTS)
+    except Exception as e:
+        failures.append(("posts", str(e)))
+
+    try:
         todos = fetch_json(API_TODOS)
     except Exception as e:
-        logger.error(f"API failed: {e}")
+        failures.append(("todos", str(e)))
+
+    # -------- FAILURE HANDLING (send only to admin) --------
+    if failures:
+        logger.error("Errors occurred — sending failure email to admin")
+
+        message = failure_message(failures, timestamp)
+
         send_email(
             os.getenv("SMTP_HOST"),
             int(os.getenv("SMTP_PORT", "587")),
             os.getenv("SMTP_USER"),
             os.getenv("SMTP_PASS"),
-            recipients,
-            "Daily Report — FAILED",
-            f"Automation failed: {e}",
-            attachments=[]
+            [ADMIN_EMAIL],
+            "Report FAILED",
+            message,
+            attachments=[],
         )
         return
 
-    # Build Excel
+    # -------- EXCEL CREATION --------
     try:
         excel_path = build_excel(users, posts, todos)
     except Exception as e:
-        logger.error(f"Excel failed: {e}")
+        logger.error(f"Excel build failed: {e}")
+
+        message = failure_message([("excel", str(e))], timestamp)
+
         send_email(
             os.getenv("SMTP_HOST"),
             int(os.getenv("SMTP_PORT", "587")),
             os.getenv("SMTP_USER"),
             os.getenv("SMTP_PASS"),
-            recipients,
-            "Daily Report — FAILED",
-            f"Excel creation failed: {e}",
-            attachments=[]
+            [ADMIN_EMAIL],
+            "Report FAILED",
+            message,
+            attachments=[],
         )
         return
 
-    # Send email with Excel
+    # -------- SUCCESS EMAIL --------
+    logger.info("Report success — sending Excel")
+
+    body = success_message(len(users), len(posts), len(todos), timestamp)
+
+    # Admin receives ALWAYS
+    all_targets = list(set(recipients + [ADMIN_EMAIL]))
+
     send_email(
         os.getenv("SMTP_HOST"),
         int(os.getenv("SMTP_PORT", "587")),
         os.getenv("SMTP_USER"),
         os.getenv("SMTP_PASS"),
-        recipients,
-        "Daily Report — SUCCESS",
-        "Attached is your report.",
-        attachments=[excel_path]
+        all_targets,
+        "Report SUCCESS",
+        body,
+        attachments=[excel_path],
     )
 
-    logger.info("Run complete")
+    logger.info("==== RUN COMPLETE ====")
 
 if __name__ == "__main__":
     main()
