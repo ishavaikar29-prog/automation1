@@ -6,5 +6,5 @@ on:
   workflow_dispatch:
 
 jobs:
-  run:
+  run_weekly:
     uses: ./.github/workflows/daily-report.yml
