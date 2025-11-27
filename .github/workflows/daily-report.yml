@@ -2,7 +2,7 @@ name: Daily Report
 
 on:
   schedule:
-    - cron: "30 19 * * *"
+    - cron: "00 10 * * *"
   workflow_dispatch:
     inputs:
       mode:
