@@ -6,11 +6,19 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        type: string
+        description: "Select sending mode"
         required: false
+        type: choice
+        options:
+          - ""        # default = cron/all
+          - one
+          - many
+          - all
+        default: ""
       emails:
-        type: string
+        description: "Comma-separated emails for mode=one or mode=many"
         required: false
+        type: string
 
 jobs:
   run:
