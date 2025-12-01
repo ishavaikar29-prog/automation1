@@ -1,15 +1,12 @@
 # success_body.py
 
-def success_message(users_count, posts_count, todos_count, timestamp):
+def success_message(total_items, timestamp):
     return f"""
 Hello,
 
-Attached is your automated report.
+The automated report has been generated successfully.
 
-Records generated:
-- Users: {users_count}
-- Posts: {posts_count}
-- Todos: {todos_count}
+Total items collected across APIs: {total_items}
 
 Timestamp: {timestamp}
 

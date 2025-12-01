@@ -1,10 +1,10 @@
 # report_parent.py
-
 import os
 import json
 from datetime import datetime
 
-from api_client import fetch_json, API_USERS, API_POSTS, API_TODOS
+from api_client import run_api_flow
+from api_config import API_FLOW_CONFIG
 from excel_builder import build_excel
 from email_sender import send_email
 from error_handler import init_logger
@@ -20,11 +20,17 @@ def pick_recipients(all_rec, mode, emails):
     mode = (mode or "").lower()
     emails = (emails or "").strip()
 
-    if mode in ("", "cron", "all"):
+    if mode in ("", "all"):
         return all_rec
+
     if mode == "one":
+        if not emails:
+            raise ValueError("For mode=one, email is required.")
         return [emails]
+
     if mode == "many":
+        if not emails:
+            raise ValueError("For mode=many, emails are required.")
         parts = [e.strip() for e in emails.split(",") if e.strip()]
         for p in parts:
             if p not in all_rec:
@@ -32,6 +38,38 @@ def pick_recipients(all_rec, mode, emails):
         return parts
 
     raise ValueError("Invalid mode")
+
+
+def load_dynamic_api_flow():
+    """
+    Merge API_FLOW_CONFIG (method/body/params/headers defined in code)
+    with environment URLs: API_1_URL, API_2_URL, ...
+    Stops when next API_X_URL is not present.
+    Returns list of steps ready for run_api_flow.
+    """
+    api_flow = []
+    index = 1
+
+    for cfg in API_FLOW_CONFIG:
+        env_name = f"API_{index}_URL"
+        url = os.getenv(env_name)
+        if not url:
+            # if URL is missing for this index, we stop adding further steps.
+            # (This supports dynamic count of APIs via secrets.)
+            break
+
+        step = {
+            "name": cfg.get("name") or f"api{index}",
+            "method": cfg.get("method"),
+            "url": url,
+            "body": cfg.get("body", {}),
+            "params": cfg.get("params", {}),
+            "headers": cfg.get("headers", {}),
+        }
+        api_flow.append(step)
+        index += 1
+
+    return api_flow
 
 
 def main():
@@ -47,28 +85,33 @@ def main():
 
     # ------------------ RECIPIENTS -------------------
     recipients_json = os.getenv("RECIPIENTS_JSON")
-    all_recipients = json.loads(recipients_json)
+    try:
+        all_recipients = json.loads(recipients_json)
+    except Exception:
+        logger.error("RECIPIENTS_JSON is missing or invalid")
+        return
 
     mode = os.getenv("MODE", "")
     emails = os.getenv("EMAILS", "")
-    recipients = pick_recipients(all_recipients, mode, emails)
+    try:
+        recipients = pick_recipients(all_recipients, mode, emails)
+    except Exception as e:
+        logger.error(f"Recipient selection failed: {e}")
+        return
 
-    # ------------------ API FETCH --------------------
+    # ------------------ API FLOW --------------------
     failures = []
+    api_results = {}
     try:
-        users = fetch_json(API_USERS)
-    except Exception as e:
-        failures.append(("users", str(e)))
+        api_flow = load_dynamic_api_flow()
+        if not api_flow:
+            raise RuntimeError("No API URLs found in environment. Add API_1_URL...")
 
-    try:
-        posts = fetch_json(API_POSTS)
-    except Exception as e:
-        failures.append(("posts", str(e)))
+        api_results = run_api_flow(api_flow)
 
-    try:
-        todos = fetch_json(API_TODOS)
     except Exception as e:
-        failures.append(("todos", str(e)))
+        logger.exception("API flow failed")
+        failures.append(("api_flow", str(e)))
 
     # ------------------ FAILURE HANDLING ------------------
     if failures:
@@ -92,9 +135,12 @@ def main():
 
     # ------------------ EXCEL CREATION ------------------
     try:
-        excel_path = build_excel(users, posts, todos)
+        # Build a dictionary of datasets to pass to build_excel.
+        # If your API steps are named "users", "posts", "todos" they will become sheet names.
+        # Example: api_results == {"login": {...}, "users": [...], "transactions": [...]}
+        excel_path = build_excel(api_results)  # our build_excel supports dict input
     except Exception as e:
-        logger.error(f"Excel build failed: {e}")
+        logger.exception(f"Excel build failed: {e}")
 
         message_admin = admin_failure_message([("excel", str(e))], timestamp)
 
@@ -114,10 +160,13 @@ def main():
     # ------------------ SUCCESS EMAILS ------------------
     logger.info("Report success — sending Excel")
 
-    # BODY FOR USERS (simple)
-    user_body = success_message(len(users), len(posts), len(todos), timestamp)
+    # user_body: use counts of list-like datasets (sum of lengths of lists in api_results)
+    total_items = 0
+    for v in api_results.values():
+        if isinstance(v, list):
+            total_items += len(v)
 
-    # BODY FOR ADMIN (special)
+    user_body = success_message(total_items, timestamp)
     admin_body = admin_success_message(timestamp)
 
     # -------- SEND TO NORMAL USERS (Excel ONLY) --------

@@ -9,8 +9,7 @@ on:
         description: "Select sending mode"
         required: false
         type: choice
-        options:
-          - ""        # default = cron/all
+        options:        
           - one
           - many
           - all
@@ -45,6 +44,13 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
+          # Add as many API_X_URL as you need:
+          API_1_URL: ${{ secrets.API_1_URL }}
+          API_2_URL: ${{ secrets.API_2_URL }}
+          API_3_URL: ${{ secrets.API_3_URL }}
+          # API_4_URL: ${{ secrets.API_4_URL }}
+          # API_5_URL: ${{ secrets.API_5_URL }}
 
       - uses: actions/upload-artifact@v4
         if: always()
