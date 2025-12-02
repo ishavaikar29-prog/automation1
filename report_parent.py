@@ -3,7 +3,7 @@ import os
 import json
 from datetime import datetime
 
-from api_client import run_api_flow
+from api_client import call_api
 from api_config import API_FLOW_CONFIG
 from excel_builder import build_excel
 from email_sender import send_email
