@@ -7,7 +7,7 @@ from retry_handler import retry_with_time_limit
 logger = logging.getLogger("automation")
 
 
-@retry_with_time_limit
+@retry_with_time_limit()
 def call_api(method, url, params=None, body=None, headers=None, timeout=15):
     """
     PURE GENERIC API CLIENT.
