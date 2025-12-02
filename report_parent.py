@@ -18,14 +18,14 @@ logger = init_logger()
 def load_dynamic_api_flow():
     """
     Merge API_FLOW_CONFIG with environment URLs:
-    API_1_URL, API_2_URL, ...
+    API1_URL, API2_URL, ...
     Stops when next API_X_URL does not exist.
     """
     api_flow = []
     index = 1
 
     for cfg in API_FLOW_CONFIG:
-        env_name = f"API_{index}_URL"
+        env_name = f"API{index}_URL"
         url = os.getenv(env_name)
 
         if not url:
