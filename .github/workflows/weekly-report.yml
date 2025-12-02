@@ -8,3 +8,7 @@ on:
 jobs:
   run_weekly:
     uses: ./.github/workflows/daily-report.yml
+    with:
+      mode: ""   # or pass empty to default
+      emails: ""
+    secrets: inherit

@@ -23,6 +23,8 @@ def send_email(host, port, user, password, recipients, subject, body, attachment
             encoders.encode_base64(part)
             part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(path)}")
             msg.attach(part)
+        else:
+            logger.warning(f"Attachment not found: {path}")
 
     server = smtplib.SMTP(host, port)
     server.starttls()

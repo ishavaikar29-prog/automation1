@@ -1,44 +1,39 @@
 # retry_handler.py
 import time
+import functools
 import logging
-import requests
-
-MAX_TOTAL_RETRY_SECONDS = 30
-INITIAL_DELAY = 1
-BACKOFF = 2
-MAX_ATTEMPTS = 6
 
 logger = logging.getLogger("automation")
 
-def retry_with_time_limit(func):
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        attempt = 0
-        delay = INITIAL_DELAY
-        last_exc = None
+def retry_with_time_limit(max_attempts=3, initial_delay=1.0, backoff=2.0, total_timeout=30.0):
+    """
+    Decorator factory that retries the wrapped function up to max_attempts or until total_timeout reached.
+    Usage:
+      @retry_with_time_limit()
+      def fn(...): ...
+    """
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            attempt = 0
+            delay = initial_delay
+            last_exc = None
 
-        while True:
-            attempt += 1
-            try:
-                return func(*args, **kwargs)
-            except requests.RequestException as e:
-                last_exc = e
-                elapsed = time.time() - start
-                remaining = MAX_TOTAL_RETRY_SECONDS - elapsed
-
-                logger.error(f"[RETRY] Attempt {attempt} failed: {e}")
-
-                if attempt >= MAX_ATTEMPTS or remaining <= 0:
-                    logger.error("Retry window exhausted. Giving up.")
-                    break
-
-                sleep_for = min(delay, remaining)
-                logger.info(f"[RETRY] Sleeping {sleep_for}s…")
-                time.sleep(sleep_for)
-                delay *= BACKOFF
-            except Exception as e:
-                logger.error(f"Permanent error: {e}")
-                raise
-
-        raise last_exc
-    return wrapper
+            while attempt < max_attempts:
+                try:
+                    return fn(*args, **kwargs)
+                except Exception as e:
+                    last_exc = e
+                    attempt += 1
+                    elapsed = time.time() - start
+                    if elapsed + delay > total_timeout or attempt >= max_attempts:
+                        logger.error(f"[RETRY] Giving up after attempt {attempt}: {e}")
+                        raise
+                    logger.warning(f"[RETRY] attempt {attempt} failed: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= backoff
+            # if we exit loop
+            raise last_exc
+        return wrapper
+    return decorator
