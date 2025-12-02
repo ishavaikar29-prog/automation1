@@ -4,7 +4,7 @@
 
 API_FLOW_CONFIG = [
     {
-        "name": "API1_URL",
+        "name": "API_1_URL",
         "method": "POST",
         "body": { "bankDomainName": "testbankt1"},
         "params": {},
