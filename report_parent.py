@@ -15,6 +15,36 @@ from admin_body import admin_success_message, admin_failure_message
 
 logger = init_logger()
 
+def load_dynamic_api_flow():
+    """
+    Merge API_FLOW_CONFIG with environment URLs:
+    API_1_URL, API_2_URL, ...
+    Stops when next API_X_URL does not exist.
+    """
+    api_flow = []
+    index = 1
+
+    for cfg in API_FLOW_CONFIG:
+        env_name = f"API_{index}_URL"
+        url = os.getenv(env_name)
+
+        if not url:
+            break  # Stop when no more URLs
+
+        step = {
+            "name": cfg.get("name") or f"api{index}",
+            "method": cfg.get("method"),
+            "url": url,
+            "body": cfg.get("body", {}),
+            "params": cfg.get("params", {}),
+            "headers": cfg.get("headers", {}),
+        }
+
+        api_flow.append(step)
+        index += 1
+
+    return api_flow
+
 
 def pick_recipients(all_rec, mode, emails):
     mode = (mode or "").lower()
@@ -40,36 +70,62 @@ def pick_recipients(all_rec, mode, emails):
     raise ValueError("Invalid mode")
 
 
-def load_dynamic_api_flow():
+def execute_api_flow(api_flow):
     """
-    Merge API_FLOW_CONFIG (method/body/params/headers defined in code)
-    with environment URLs: API_1_URL, API_2_URL, ...
-    Stops when next API_X_URL is not present.
-    Returns list of steps ready for run_api_flow.
+    Executes API steps one-by-one.
+    Handles token extraction and placeholder replacement.
+    This now lives in main layer (as boss required).
     """
-    api_flow = []
-    index = 1
+    results = {}
+    shared = {}
 
-    for cfg in API_FLOW_CONFIG:
-        env_name = f"API_{index}_URL"
-        url = os.getenv(env_name)
-        if not url:
-            # if URL is missing for this index, we stop adding further steps.
-            # (This supports dynamic count of APIs via secrets.)
-            break
+    for step in api_flow:
+        name = step["name"]
+        method = step["method"]
+        url = step["url"]
+        params = step.get("params") or {}
+        body = step.get("body") or {}
+        headers = step.get("headers") or {}
 
-        step = {
-            "name": cfg.get("name") or f"api{index}",
-            "method": cfg.get("method"),
-            "url": url,
-            "body": cfg.get("body", {}),
-            "params": cfg.get("params", {}),
-            "headers": cfg.get("headers", {}),
-        }
-        api_flow.append(step)
-        index += 1
+        # ---- Token replacement moved here ----
+        if "token" in shared:
+            token = shared["token"]
 
-    return api_flow
+            if isinstance(url, str):
+                url = url.replace("{token}", token)
+
+            headers = {
+                k: (v.replace("{token}", token) if isinstance(v, str) else v)
+                for k, v in headers.items()
+            }
+
+            params = {
+                k: (v.replace("{token}", token) if isinstance(v, str) else v)
+                for k, v in params.items()
+            }
+
+            if isinstance(body, dict):
+                body = {
+                    k: (v.replace("{token}", token) if isinstance(v, str) else v)
+                    for k, v in body.items()
+                }
+
+        # ---- Call generic client ----
+        resp = call_api(
+            method=method,
+            url=url,
+            params=params,
+            body=body,
+            headers=headers
+        )
+
+        results[name] = resp
+
+        # ---- Token extraction moved here ----
+        if isinstance(resp, dict) and "token" in resp:
+            shared["token"] = resp["token"]
+
+    return results
 
 
 def main():

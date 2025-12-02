@@ -6,23 +6,9 @@ API_FLOW_CONFIG = [
     {
         "name": "login",
         "method": "POST",
-        "body": {"username": "myuser", "password": "mypassword"},
+        "body": { "bankDomainName": "testbankt1"},
         "params": {},
         "headers": {"Content-Type": "application/json"}
-    },
-    {
-        "name": "users",
-        "method": "GET",
-        "body": {},
-        "params": {"limit": "100"},
-        "headers": {"Authorization": "Bearer {token}"}
-    },
-    {
-        "name": "transactions",
-        "method": "GET",
-        "body": {},
-        "params": {},
-        "headers": {"Authorization": "Bearer {token}"}
     }
 ]
 
