@@ -8,7 +8,7 @@ logger = logging.getLogger("automation")
 
 
 @retry_with_time_limit()
-def call_api(method, url, params=None, body=None, headers=None, timeout=15):
+def call_api(method, url, params=None, body=None, headers=None, timeout=60):
     """
     PURE GENERIC API CLIENT.
     No flow logic.
