@@ -163,7 +163,8 @@ def main():
         if not api_flow:
             raise RuntimeError("No API URLs found in environment. Add API_1_URL...")
 
-        api_results = run_api_flow(api_flow)
+        api_results = execute_api_flow(api_flow)
+
 
     except Exception as e:
         logger.exception("API flow failed")
