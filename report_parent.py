@@ -125,12 +125,16 @@ def execute_api_flow(api_flow):
         )
 
         results[name] = resp
-
-        # ---- Token extraction moved here ----
-        if isinstance(resp, dict) and "token" in resp:
-            shared["token"] = resp["token"]
-
-    return results
+        
+        if isinstance(resp, dict):
+            if "accessToken" in resp:
+                shared["token"] = resp["accessToken"]
+            elif "access_token" in resp:
+                shared["token"] = resp["access_token"]
+            elif "token" in resp:
+                shared["token"] = resp["token"]
+                
+        return results
 
 
 def main():
