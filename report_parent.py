@@ -68,7 +68,6 @@ def execute_api_flow(api_flow):
     """
     Executes API steps one-by-one.
     Handles token extraction and placeholder replacement.
-    This now lives in main layer (as boss required).
     """
     results = {}
     shared = {}
@@ -83,6 +82,7 @@ def execute_api_flow(api_flow):
         body = step.get("body") or {}
         headers = step.get("headers") or {}
 
+        # ---- Username / password injection ----
         if isinstance(body, dict):
             body = {
                 k: (
@@ -92,7 +92,7 @@ def execute_api_flow(api_flow):
                 for k, v in body.items()
             }
 
-        # ---- Token replacement moved here ----
+        # ---- Token replacement ----
         if "token" in shared:
             token = shared["token"]
 
@@ -115,7 +115,7 @@ def execute_api_flow(api_flow):
                     for k, v in body.items()
                 }
 
-        # ---- Call generic client ----
+        # ---- Call API ----
         resp = call_api(
             method=method,
             url=url,
@@ -125,7 +125,8 @@ def execute_api_flow(api_flow):
         )
 
         results[name] = resp
-        
+
+        # ---- Token extraction ----
         if isinstance(resp, dict):
             if "accessToken" in resp:
                 shared["token"] = resp["accessToken"]
@@ -134,21 +135,16 @@ def execute_api_flow(api_flow):
             elif "token" in resp:
                 shared["token"] = resp["token"]
 
-
-        # If response is CSV text (string), save it to file
-        # ---- If any API returned CSV text, save it to file ----
+    # ---- Save CSV files ----
     for api_name, resp in results.items():
         if isinstance(resp, str) and "," in resp:
             csv_path = f"{api_name}.csv"
             with open(csv_path, "w", encoding="utf-8") as f:
                 f.write(resp)
-            results[api_name] = csv_path  # replace API data with file path
+            results[api_name] = csv_path
 
     return results
 
-
-                
-    return results
 
 
 def main():
