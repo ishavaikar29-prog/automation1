@@ -16,34 +16,28 @@ from admin_body import admin_success_message, admin_failure_message
 logger = init_logger()
 
 def load_dynamic_api_flow():
-    """
-    Merge API_FLOW_CONFIG with environment URLs:
-    API_1_URL, API_2_URL, ...
-    Stops when next API_X_URL does not exist.
-    """
     api_flow = []
-    index = 1
+    base_url = os.getenv("BASE_URL")
+
+    if not base_url:
+        raise RuntimeError("BASE_URL is missing in GitHub secrets")
 
     for cfg in API_FLOW_CONFIG:
-        env_name = f"API_{index}_URL"
-        url = os.getenv(env_name)
-
-        if not url:
-            break  # Stop when no more URLs
+        url = base_url.rstrip("/") + cfg["endpoint"]
 
         step = {
-            "name": cfg.get("name") or f"api{index}",
-            "method": cfg.get("method"),
+            "name": cfg["name"],
+            "method": cfg["method"],
             "url": url,
             "body": cfg.get("body", {}),
             "params": cfg.get("params", {}),
-            "headers": cfg.get("headers", {}),
+            "headers": cfg.get("headers", {})
         }
 
         api_flow.append(step)
-        index += 1
 
     return api_flow
+
 
 
 def pick_recipients(all_rec, mode, emails):
@@ -78,6 +72,8 @@ def execute_api_flow(api_flow):
     """
     results = {}
     shared = {}
+    username = os.getenv("API_USERNAME")
+    password = os.getenv("API_PASSWORD")
 
     for step in api_flow:
         name = step["name"]
@@ -86,6 +82,15 @@ def execute_api_flow(api_flow):
         params = step.get("params") or {}
         body = step.get("body") or {}
         headers = step.get("headers") or {}
+
+        if isinstance(body, dict):
+            body = {
+                k: (
+                    v.replace("{username}", username).replace("{password}", password)
+                    if isinstance(v, str) else v
+                )
+                for k, v in body.items()
+            }
 
         # ---- Token replacement moved here ----
         if "token" in shared:
