@@ -126,7 +126,8 @@ def execute_api_flow(api_flow):
 
         results[name] = resp
 
-        # ---- Token extraction ----
+        logger.info(f"Login response: {resp}")
+
         if isinstance(resp, dict):
             if "accessToken" in resp:
                 shared["token"] = resp["accessToken"]
@@ -134,6 +135,18 @@ def execute_api_flow(api_flow):
                 shared["token"] = resp["access_token"]
             elif "token" in resp:
                 shared["token"] = resp["token"]
+            
+            # NEW: nested structures
+            elif "data" in resp and isinstance(resp["data"], dict):
+                data = resp["data"]
+                
+                if "accessToken" in data:
+                    shared["token"] = data["accessToken"]
+                elif "tokens" in data and isinstance(data["tokens"], dict):
+                    tokens = data["tokens"]
+                    if "accessToken" in tokens:
+                        shared["token"] = tokens["accessToken"]
+
 
     # ---- Save CSV files ----
     for api_name, resp in results.items():
