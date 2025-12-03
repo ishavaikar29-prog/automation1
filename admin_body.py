@@ -13,7 +13,7 @@ This email contains:
 Timestamp: {timestamp}
 
 Regards,
-Automation System
+Cofinity System
 """
 
 def admin_failure_message(errors, timestamp):
