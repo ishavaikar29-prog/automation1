@@ -133,8 +133,22 @@ def execute_api_flow(api_flow):
                 shared["token"] = resp["access_token"]
             elif "token" in resp:
                 shared["token"] = resp["token"]
+
+
+        # If response is CSV text (string), save it to file
+        # ---- If any API returned CSV text, save it to file ----
+    for api_name, resp in results.items():
+        if isinstance(resp, str) and "," in resp:
+            csv_path = f"{api_name}.csv"
+            with open(csv_path, "w", encoding="utf-8") as f:
+                f.write(resp)
+            results[api_name] = csv_path  # replace API data with file path
+
+    return results
+
+
                 
-        return results
+    return results
 
 
 def main():
@@ -234,8 +248,10 @@ def main():
 
     user_body = success_message(total_items, timestamp)
     admin_body = admin_success_message(timestamp)
-
-    # -------- SEND TO NORMAL USERS (Excel ONLY) --------
+    
+    
+    csv_files = [v for v in api_results.values() if isinstance(v, str) and v.endswith(".csv")]
+    
     if recipients:
         send_email(
             os.getenv("SMTP_HOST"),
@@ -245,8 +261,9 @@ def main():
             recipients,
             "REPORT SUCCESS",
             user_body,
-            attachments=[excel_path],
+            attachments=csv_files,
         )
+
 
     # -------- SEND TO ADMIN (Excel + log) --------
     send_email(
@@ -257,7 +274,7 @@ def main():
         [ADMIN_EMAIL],
         "REPORT SUCCESS (ADMIN COPY)",
         admin_body,
-        attachments=[excel_path, "run.log"],
+        attachments=csv_files + ["run.log"],
     )
 
     logger.info("==== RUN COMPLETE ====")
