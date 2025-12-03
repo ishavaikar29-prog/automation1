@@ -4,7 +4,7 @@ API_FLOW_CONFIG = [
         "method": "POST",
         "endpoint": "/v1/token",
         "body": {
-            "username": "{username}",
+            "userId": "{userId}",
             "password": "{password}",
             "bankName": "janaatasahakaribank"
         },
