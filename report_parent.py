@@ -72,7 +72,7 @@ def execute_api_flow(api_flow):
     """
     results = {}
     shared = {}
-    username = os.getenv("API_USERNAME")
+    userId = os.getenv("API_USERNAME")
     password = os.getenv("API_PASSWORD")
 
     for step in api_flow:
@@ -86,7 +86,7 @@ def execute_api_flow(api_flow):
         if isinstance(body, dict):
             body = {
                 k: (
-                    v.replace("{username}", username).replace("{password}", password)
+                    v.replace("{userId}", userId).replace("{password}", password)
                     if isinstance(v, str) else v
                 )
                 for k, v in body.items()
