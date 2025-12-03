@@ -2,7 +2,7 @@ API_FLOW_CONFIG = [
     {
         "name": "login",
         "method": "POST",
-        "endpoint": "/api/v1/token",
+        "endpoint": "/v1/token",
         "body": {
             "username": "{username}",
             "password": "{password}",
@@ -13,7 +13,7 @@ API_FLOW_CONFIG = [
     {
         "name": "LOGS",
         "method": "POST",
-        "endpoint": "/api/log/download",
+        "endpoint": "/log/download",
         "body": {
             "startDate": "2025-12-03",
             "endDate": "2025-12-03"
