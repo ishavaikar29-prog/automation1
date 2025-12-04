@@ -18,7 +18,7 @@ on:
         description: "Comma-separated emails (only for custom)"
         required: false
         type: string
-        if: ${{ github.event.inputs.mode == 'custom' }}
+        
 
 jobs:
   run:
