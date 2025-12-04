@@ -3,24 +3,22 @@ name: Daily Report
 on:
   schedule:
     - cron: "00 10 * * *"
- workflow_dispatch:
-  inputs:
-    mode:
-      description: "Select sending mode"
-      required: true
-      type: choice
-      options:
-        - custom
-        - all
-      default: "all"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Select sending mode"
+        required: true
+        type: choice
+        options:
+          - custom
+          - all
+        default: "all"
 
-    emails:
-      description: "Comma-separated emails (only for custom)"
-      required: false
-      type: string
-      # GitHub Actions conditional display rule
-      # This ensures the emails box appears ONLY when mode = custom
-      if: ${{ github.event.inputs.mode == 'custom' }}
+      emails:
+        description: "Comma-separated emails (only for custom)"
+        required: false
+        type: string
+        if: ${{ github.event.inputs.mode == 'custom' }}
 
 jobs:
   run:
