@@ -44,23 +44,19 @@ def pick_recipients(all_rec, mode, emails):
     mode = (mode or "").lower()
     emails = (emails or "").strip()
 
-    if mode in ("", "all"):
+    # all = send to all recipients
+    if mode == "all":
         return all_rec
 
-    if mode == "one":
+    # custom = manually selected emails
+    if mode == "custom":
         if not emails:
-            raise ValueError("For mode=one, email is required.")
-        return [emails]
+            raise ValueError("For mode=custom, emails are required.")
 
-    if mode == "many":
-        if not emails:
-            raise ValueError("For mode=many, emails are required.")
         parts = [e.strip() for e in emails.split(",") if e.strip()]
-        for p in parts:
-            if p not in all_rec:
-                raise ValueError(f"Invalid email: {p}")
         return parts
 
+    # fallback (should not happen)
     raise ValueError("Invalid mode")
 
 
