@@ -16,21 +16,26 @@ Regards,
 Cofinity System
 """
 
-def admin_failure_message(errors, timestamp):
-    msg = """
+def admin_failure_message(failures, timestamp, summary=""):
+
+    msg = f"""
 Hello Admin,
 
 The automated report FAILED.
 
-Errors:
+Failure Summary:
+{summary}
+
+Errors Detected:
 """
-    for name, err in errors:
+
+    for name, err in failures:
         msg += f"- {name}: {err}\n"
 
     msg += f"""
 
 This email contains:
-- run.log file only (Excel not generated)
+- run.log only (Excel not generated)
 
 Timestamp: {timestamp}
 
