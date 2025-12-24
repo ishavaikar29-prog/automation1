@@ -38,6 +38,44 @@ def load_dynamic_api_flow():
 
     return api_flow
 
+def summarize_log_error():
+    try:
+        if not os.path.exists("run.log"):
+            return "Run log missing."
+
+        with open("run.log", "r", encoding="utf-8") as f:
+            log = f.read()
+
+        # PRIORITY-BASED ERROR DETECTION
+        if "401" in log or "Unauthorized" in log:
+            return "Authentication failed — invalid or expired token."
+
+        if "ConnectionError" in log:
+            return "API server unreachable — network or server down."
+
+        if "JSONDecodeError" in log:
+            return "Invalid API response — JSON parsing failed."
+
+        if "SMTPAuthenticationError" in log:
+            return "Email sending failed — SMTP authentication error."
+
+        if "Timeout" in log:
+            return "API timeout — server did not respond."
+
+        if "FileNotFoundError" in log:
+            return "Missing file — attachment or resource not found."
+
+        if "KeyError" in log:
+            return "Required field missing in API response."
+
+        if "Token" in log and "WARNING" in log:
+            return "Token missing in login API response."
+
+        # Default fallback
+        return "Unexpected workflow failure. Check run.log for details."
+
+    except Exception:
+        return "Error analyzing log file."
 
 def pick_recipients(all_rec, mode, emails):
     mode = (mode or "").lower()
@@ -212,7 +250,9 @@ def main():
     if failures:
         logger.error("Errors occurred — sending failure email to ADMIN only")
 
-        message_admin = admin_failure_message(failures, timestamp)
+        summary = summarize_log_error()
+        message_admin = admin_failure_message(failures, timestamp, summary=summary)
+
 
         send_email(
             os.getenv("SMTP_HOST"),
