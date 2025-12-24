@@ -39,7 +39,6 @@ def load_dynamic_api_flow():
     return api_flow
 
 
-
 def pick_recipients(all_rec, mode, emails):
     mode = (mode or "").lower()
     emails = (emails or "").strip()
@@ -112,37 +111,50 @@ def execute_api_flow(api_flow):
                 }
 
         # ---- Call API ----
-        resp = call_api(
-            method=method,
-            url=url,
-            params=params,
-            body=body,
-            headers=headers
-        )
+        try:
+            resp = call_api(
+                method=method,
+                url=url,
+                params=params,
+                body=body,
+                headers=headers
+            )
+        except Exception:
+            logger.error(
+                f"[API ERROR] Step '{name}' failed while calling {url}",
+                exc_info=True
+            )
+            raise
 
         results[name] = resp
 
-        logger.info(f"Login response: {resp}")
+        logger.info(f"[RESPONSE] Step '{name}' returned: {resp}")
 
-        if isinstance(resp, dict):
-            if "accessToken" in resp:
-                shared["token"] = resp["accessToken"]
-            elif "access_token" in resp:
-                shared["token"] = resp["access_token"]
-            elif "token" in resp:
-                shared["token"] = resp["token"]
-            
-            # NEW: nested structures
-            elif "data" in resp and isinstance(resp["data"], dict):
-                data = resp["data"]
-                
-                if "accessToken" in data:
-                    shared["token"] = data["accessToken"]
-                elif "tokens" in data and isinstance(data["tokens"], dict):
-                    tokens = data["tokens"]
-                    if "accessToken" in tokens:
-                        shared["token"] = tokens["accessToken"]
-
+        # ---- Token extraction ----
+        try:
+            if isinstance(resp, dict):
+                if "accessToken" in resp:
+                    shared["token"] = resp["accessToken"]
+                    logger.info(f"[TOKEN] Extracted: {shared['token']}")
+                elif "access_token" in resp:
+                    shared["token"] = resp["access_token"]
+                    logger.info(f"[TOKEN] Extracted: {shared['token']}")
+                elif "token" in resp:
+                    shared["token"] = resp["token"]
+                    logger.info(f"[TOKEN] Extracted: {shared['token']}")
+                elif "data" in resp and "tokens" in resp["data"]:
+                    shared["token"] = resp["data"]["tokens"]["accessToken"]
+                    logger.info(f"[TOKEN] Extracted: {shared['token']}")
+                else:
+                    logger.warning(
+                        f"[TOKEN WARNING] No token found for step '{name}'. Response keys: {list(resp.keys())}"
+                    )
+        except Exception:
+            logger.error(
+                f"[TOKEN EXTRACTION ERROR] Failed to extract token in step '{name}'",
+                exc_info=True
+            )
+            raise
 
     # ---- Save CSV files ----
     for api_name, resp in results.items():
@@ -188,10 +200,9 @@ def main():
     try:
         api_flow = load_dynamic_api_flow()
         if not api_flow:
-            raise RuntimeError("No API URLs found in environment. Add API_1_URL...")
+            raise RuntimeError("No API URLs found")
 
         api_results = execute_api_flow(api_flow)
-
 
     except Exception as e:
         logger.exception("API flow failed")
@@ -201,10 +212,8 @@ def main():
     if failures:
         logger.error("Errors occurred — sending failure email to ADMIN only")
 
-        message_user = failure_message(failures, timestamp)         # normal error body (not used)
-        message_admin = admin_failure_message(failures, timestamp)  # admin-specific error body
+        message_admin = admin_failure_message(failures, timestamp)
 
-        # ADMIN gets log file always
         send_email(
             os.getenv("SMTP_HOST"),
             int(os.getenv("SMTP_PORT", "587")),
@@ -219,16 +228,12 @@ def main():
 
     # ------------------ EXCEL CREATION ------------------
     try:
-        # Build a dictionary of datasets to pass to build_excel.
-        # If your API steps are named "users", "posts", "todos" they will become sheet names.
-        # Example: api_results == {"login": {...}, "users": [...], "transactions": [...]}
-        excel_path = build_excel(api_results)  # our build_excel supports dict input
+        excel_path = build_excel(api_results)
     except Exception as e:
-        logger.exception(f"Excel build failed: {e}")
+        logger.error("[EXCEL ERROR] Failed to generate Excel file", exc_info=True)
 
         message_admin = admin_failure_message([("excel", str(e))], timestamp)
 
-        # On excel failure → admin gets ONLY log file
         send_email(
             os.getenv("SMTP_HOST"),
             int(os.getenv("SMTP_PORT", "587")),
@@ -244,7 +249,6 @@ def main():
     # ------------------ SUCCESS EMAILS ------------------
     logger.info("Report success — sending Excel")
 
-    # user_body: use counts of list-like datasets (sum of lengths of lists in api_results)
     total_items = 0
     for v in api_results.values():
         if isinstance(v, list):
@@ -252,34 +256,39 @@ def main():
 
     user_body = success_message(total_items, timestamp)
     admin_body = admin_success_message(timestamp)
-    
-    
+
     csv_files = [v for v in api_results.values() if isinstance(v, str) and v.endswith(".csv")]
-    
+
+    # USER EMAIL
     if recipients:
+        try:
+            send_email(
+                os.getenv("SMTP_HOST"),
+                int(os.getenv("SMTP_PORT", "587")),
+                os.getenv("SMTP_USER"),
+                os.getenv("SMTP_PASS"),
+                recipients,
+                "REPORT SUCCESS",
+                user_body,
+                attachments=csv_files,
+            )
+        except Exception:
+            logger.error("[EMAIL ERROR] Failed to send user email", exc_info=True)
+
+    # ADMIN EMAIL
+    try:
         send_email(
             os.getenv("SMTP_HOST"),
             int(os.getenv("SMTP_PORT", "587")),
             os.getenv("SMTP_USER"),
             os.getenv("SMTP_PASS"),
-            recipients,
-            "REPORT SUCCESS",
-            user_body,
-            attachments=csv_files,
+            [ADMIN_EMAIL],
+            "REPORT SUCCESS (ADMIN COPY)",
+            admin_body,
+            attachments=csv_files + ["run.log"],
         )
-
-
-    # -------- SEND TO ADMIN (Excel + log) --------
-    send_email(
-        os.getenv("SMTP_HOST"),
-        int(os.getenv("SMTP_PORT", "587")),
-        os.getenv("SMTP_USER"),
-        os.getenv("SMTP_PASS"),
-        [ADMIN_EMAIL],
-        "REPORT SUCCESS (ADMIN COPY)",
-        admin_body,
-        attachments=csv_files + ["run.log"],
-    )
+    except Exception:
+        logger.error("[EMAIL ERROR] Failed to send admin email", exc_info=True)
 
     logger.info("==== RUN COMPLETE ====")
 
