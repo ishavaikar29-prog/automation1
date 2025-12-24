@@ -1,15 +1,20 @@
-# error_handler.py
 import logging
+import os
 
 def init_logger():
     logger = logging.getLogger("automation")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
-    # Avoid adding multiple handlers if init_logger called multiple times
-    if not logger.handlers:
-        fh = logging.FileHandler("run.log", mode="w")
-        fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-        fh.setFormatter(fmt)
-        logger.addHandler(fh)
+    # File handler
+    fh = logging.FileHandler("run.log", mode="w", encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+
+    # Log format with timestamp, level, file, line, function
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(filename)s:%(lineno)d in %(funcName)s() | %(message)s"
+    )
+
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
     return logger
