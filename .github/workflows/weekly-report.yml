@@ -2,13 +2,74 @@ name: Weekly Report
 
 on:
   schedule:
-    - cron: "30 19 * * SAT"
+    - cron: "0 20 * * 6"   # Every Saturday 8 PM UTC
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Select sending mode"
+        required: true
+        type: choice
+        options:
+          - custom
+          - all
+        default: "all"
+
+      emails:
+        description: "Comma-separated emails (only for custom)"
+        required: false
+        type: string
+
+      startDate:
+        description: "Start date (YYYY-MM-DD)"
+        required: false
+        type: string
+      
+      endDate:
+        description: "End date (YYYY-MM-DD)"
+        required: false
+        type: string
 
 jobs:
-  run_weekly:
-    uses: ./.github/workflows/daily-report.yml
-    with:
-      mode: ""   # or pass empty to default
-      emails: ""
-    secrets: inherit
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - run: python report_parent.py
+        env:
+          # 🔹 REPORT TYPE (MOST IMPORTANT)
+          REPORT_TYPE: weekly
+
+          # 🔹 Dates (empty for cron, optional for manual)
+          START_DATE: ${{ github.event.inputs.startDate }}
+          END_DATE: ${{ github.event.inputs.endDate }}
+
+          # 🔹 Email logic
+          MODE: ${{ github.event.inputs.mode }}
+          EMAILS: ${{ github.event.inputs.emails }}
+          RECIPIENTS_JSON: ${{ secrets.RECIPIENTS_JSON }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+
+          # 🔹 SMTP
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
+          # 🔹 API
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_USERNAME: ${{ secrets.API_USERNAME }}
+          API_PASSWORD: ${{ secrets.API_PASSWORD }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs
+          path: run.log
