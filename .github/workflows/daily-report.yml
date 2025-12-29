@@ -18,6 +18,16 @@ on:
         description: "Comma-separated emails (only for custom)"
         required: false
         type: string
+
+      startDate:
+        description: "Start date (YYYY-MM-DD)"
+        required: false
+        type: string
+      
+      endDate:
+        description: "End date (YYYY-MM-DD)"
+        required: false
+        type: string
         
 
 jobs:
@@ -37,6 +47,8 @@ jobs:
         env:
           RECIPIENTS_JSON: ${{ secrets.RECIPIENTS_JSON }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          START_DATE: ${{ github.event.inputs.startDate }}
+          END_DATE: ${{ github.event.inputs.endDate }}
 
           MODE: ${{ github.event.inputs.mode }}
           EMAILS: ${{ github.event.inputs.emails }}
