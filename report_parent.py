@@ -154,6 +154,33 @@ def execute_api_flow(api_flow):
             results[api_name] = path
 
     return results
+def resolve_date_range():
+    """
+    Resolves start_date and end_date based on REPORT_TYPE.
+    Supports only: daily, weekly
+    """
+
+    report_type = os.getenv("REPORT_TYPE", "daily").lower()
+
+    # If explicitly provided, respect them
+    start_date = os.getenv("START_DATE")
+    end_date = os.getenv("END_DATE")
+
+    if start_date and end_date:
+        return start_date, end_date
+
+    today = date.today()
+
+    if report_type == "daily":
+        d = today - timedelta(days=1)
+        return d.isoformat(), d.isoformat()
+
+    if report_type == "weekly":
+        end = today
+        start = today - timedelta(days=6)
+        return start.isoformat(), end.isoformat()
+
+    raise ValueError("Only daily and weekly report types are supported")
 
 
 def main():
@@ -168,31 +195,12 @@ def main():
     all_recipients = json.loads(os.getenv("RECIPIENTS_JSON"))
     recipients = pick_recipients(all_recipients, os.getenv("MODE"), os.getenv("EMAILS"))
 
-    # 🔹 FIXED DAILY / WEEKLY LOGIC (ONLY THIS PART)
-    REPORT_TYPE = os.getenv("REPORT_TYPE", "daily")
-    start_date = os.getenv("START_DATE")
-    end_date = os.getenv("END_DATE")
+  
+    start_date, end_date = resolve_date_range()
 
-    if not start_date or not end_date:
-        today = date.today()
-
-        if REPORT_TYPE == "daily":
-            start_date = end_date = today.isoformat()
-
-        elif REPORT_TYPE == "weekly":
-            end_date = today
-            start_date = (today - timedelta(days=6)).isoformat()
-            end_date = end_date.isoformat()
-
-        elif REPORT_TYPE == "monthly":
-            first = today.replace(day=1)
-            last = first - timedelta(days=1)
-            start_date = last.replace(day=1).isoformat()
-            end_date = last.isoformat()
-
-    # 🔹 EXPORT BACK TO ENV
     os.environ["START_DATE"] = start_date
     os.environ["END_DATE"] = end_date
+
 
     try:
         api_results = execute_api_flow(load_dynamic_api_flow())
