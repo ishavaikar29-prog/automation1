@@ -103,10 +103,13 @@ def execute_api_flow(api_flow):
     Executes API steps one-by-one.
     Handles token extraction and placeholder replacement.
     """
+    
     results = {}
     shared = {}
     userId = os.getenv("API_USERNAME")
     password = os.getenv("API_PASSWORD")
+    start_date = os.getenv("START_DATE")
+    end_date = os.getenv("END_DATE")
 
     for step in api_flow:
         name = step["name"]
@@ -115,6 +118,28 @@ def execute_api_flow(api_flow):
         params = step.get("params") or {}
         body = step.get("body") or {}
         headers = step.get("headers") or {}
+        
+        
+    if isinstance(params, dict):
+        params = {
+            k: (
+                v.replace("{startDate}", start_date)
+                .replace("{endDate}", end_date)
+                if isinstance(v, str) else v
+            )
+            for k, v in params.items()
+        }
+        
+    if isinstance(body, dict):
+        body = {
+            k: (
+                v.replace("{startDate}", start_date)
+                .replace("{endDate}", end_date)
+                if isinstance(v, str) else v
+            )
+            for k, v in body.items()
+        }
+
 
         # ---- Username / password injection ----
         if isinstance(body, dict):
