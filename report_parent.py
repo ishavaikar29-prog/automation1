@@ -2,6 +2,7 @@
 import os
 import json
 from datetime import datetime
+from datetime import date
 
 from api_client import call_api
 from api_config import API_FLOW_CONFIG
@@ -231,6 +232,15 @@ def main():
     except Exception as e:
         logger.error(f"Recipient selection failed: {e}")
         return
+    
+    start_date = os.getenv("START_DATE")
+    end_date = os.getenv("END_DATE")
+
+# If user did not provide dates → use today's date
+    if not start_date or not end_date:
+        today = date.today().isoformat()
+        start_date = start_date or today
+        end_date = end_date or today
 
     # ------------------ API FLOW --------------------
     failures = []
