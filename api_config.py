@@ -12,6 +12,18 @@ API_FLOW_CONFIG = [
     },
     {
         "name": "LOGS",
+        "method": "GET",
+        "endpoint": "/api/report/logs",
+        "params": {
+            "startDate": "{startDate}",
+            "endDate": "{endDate}"
+        },
+        "headers": {
+            "Authorization": "Bearer {token}"
+        }
+    }
+    {
+        "name": "LOGS",
         "method": "POST",
         "endpoint": "/log/download",
         "body": {
