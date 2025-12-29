@@ -21,7 +21,7 @@ API_FLOW_CONFIG = [
         "headers": {
             "Authorization": "Bearer {token}"
         }
-    }
+    },
     {
         "name": "LOGS",
         "method": "POST",
