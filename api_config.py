@@ -22,4 +22,5 @@ API_FLOW_CONFIG = [
             "Authorization": "Bearer {token}"
         }
     },
+]
   
