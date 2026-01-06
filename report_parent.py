@@ -218,7 +218,23 @@ def main():
         )
         return
 
-    excel_path = build_excel(api_results)
+    # --------- ADD START (Excel shaping only) ---------
+
+        excel_payload = {}
+        for api_name, resp in api_results.items():
+    # If API returned { success, data }
+            if isinstance(resp, dict) and isinstance(resp.get("data"), list):
+                excel_payload[api_name] = resp["data"]
+
+            # Fallback to original behavior if nothing matched
+        if not excel_payload:
+            excel_payload = api_results
+
+        # --------- ADD END ---------
+
+
+    excel_path = build_excel(excel_payload)
+
 
     send_email(
         os.getenv("SMTP_HOST"),
