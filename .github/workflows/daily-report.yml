@@ -41,6 +41,42 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate input dates (ISO format)
+        run: |
+          set -e
+
+          echo "START_DATE=$START_DATE"
+          echo "END_DATE=$END_DATE"
+
+          validate_date() {
+            date -d "$1" +"%Y-%m-%d" >/dev/null 2>&1
+          }
+
+          # Validate START_DATE if provided
+          if [ -n "$START_DATE" ]; then
+            validate_date "$START_DATE" || {
+              echo " START_DATE must be valid ISO (YYYY-MM-DD). Got: $START_DATE"
+              exit 1
+            }
+          fi
+
+          # Validate END_DATE if provided
+          if [ -n "$END_DATE" ]; then
+            validate_date "$END_DATE" || {
+              echo " END_DATE must be valid ISO (YYYY-MM-DD). Got: $END_DATE"
+              exit 1
+            }
+          fi
+
+          # Validate date order
+          if [ -n "$START_DATE" ] && [ -n "$END_DATE" ]; then
+            if [ "$START_DATE" \> "$END_DATE" ]; then
+              echo " START_DATE cannot be after END_DATE"
+              exit 1
+            fi
+          fi
+
+
       - run: pip install -r requirements.txt
 
       - run: python report_parent.py
