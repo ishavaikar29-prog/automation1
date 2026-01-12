@@ -32,6 +32,11 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    env:
+      START_DATE: ${{ github.event.inputs.startDate }}
+      END_DATE: ${{ github.event.inputs.endDate }}
+      MODE: ${{ github.event.inputs.mode }}
+      EMAILS: ${{ github.event.inputs.emails }}
 
     steps:
       - uses: actions/checkout@v4
