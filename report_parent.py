@@ -212,8 +212,8 @@ def resolve_date_range():
 
 
 def main():
-    def main():
     logger.info("==== RUN START ====")
+    
 
     # FAIL FAST: validate dates
     validate_iso_date(os.getenv("START_DATE"), "START_DATE")
@@ -223,9 +223,6 @@ def main():
         os.getenv("START_DATE"),
         os.getenv("END_DATE")
     )
-
-
-    logger.info("==== RUN START ====")
     timestamp = datetime.utcnow().isoformat() + "Z"
 
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
