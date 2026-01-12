@@ -13,6 +13,28 @@ from success_body import success_message
 from failure_body import failure_message
 from admin_body import admin_success_message, admin_failure_message
 
+def validate_iso_date(value: str, var_name: str):
+    if not value:
+        return
+
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError(
+            f"{var_name} must be in ISO format YYYY-MM-DD. Got: {value}"
+        )
+
+def validate_date_range(start_date, end_date):
+    if start_date and end_date:
+        s = datetime.strptime(start_date, "%Y-%m-%d").date()
+        e = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+        if s > e:
+            raise ValueError(
+                f"START_DATE ({start_date}) cannot be after END_DATE ({end_date})"
+            )
+
+
 logger = init_logger()
 
 def load_dynamic_api_flow():
@@ -190,6 +212,19 @@ def resolve_date_range():
 
 
 def main():
+    def main():
+    logger.info("==== RUN START ====")
+
+    # FAIL FAST: validate dates
+    validate_iso_date(os.getenv("START_DATE"), "START_DATE")
+    validate_iso_date(os.getenv("END_DATE"), "END_DATE")
+
+    validate_date_range(
+        os.getenv("START_DATE"),
+        os.getenv("END_DATE")
+    )
+
+
     logger.info("==== RUN START ====")
     timestamp = datetime.utcnow().isoformat() + "Z"
 
