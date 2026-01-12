@@ -58,21 +58,21 @@ jobs:
           }
           if [ -n "$START_DATE" ]; then
           validate_date "$START_DATE" || {
-              echo "❌ START_DATE must be valid ISO YYYY-MM-DD. Got: $START_DATE"
+              echo "START_DATE must be valid ISO YYYY-MM-DD. Got: $START_DATE"
               exit 1
             }
           fi
           
           if [ -n "$END_DATE" ]; then
             validate_date "$END_DATE" || {
-              echo "❌ END_DATE must be valid ISO YYYY-MM-DD. Got: $END_DATE"
+              echo "END_DATE must be valid ISO YYYY-MM-DD. Got: $END_DATE"
               exit 1
             }
           fi
           
           if [ -n "$START_DATE" ] && [ -n "$END_DATE" ]; then
             if [ "$START_DATE" \> "$END_DATE" ]; then
-              echo "❌ START_DATE cannot be after END_DATE"
+              echo "START_DATE cannot be after END_DATE"
               exit 1
             fi
           fi
