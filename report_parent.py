@@ -198,7 +198,11 @@ def main():
         logger.error("ADMIN_EMAIL is missing")
         return
 
-    all_recipients = json.loads(os.getenv("RECIPIENTS_JSON"))
+    recipients_json = os.getenv("RECIPIENTS_JSON")
+    if not recipients_json:
+        raise RuntimeError("RECIPIENTS_JSON is missing")
+    all_recipients = json.loads(recipients_json)
+
     recipients = pick_recipients(all_recipients, os.getenv("MODE"), os.getenv("EMAILS"))
 
   
@@ -226,15 +230,15 @@ def main():
 
     # --------- ADD START (Excel shaping only) ---------
 
-        excel_payload = {}
-        for api_name, resp in api_results.items():
+    excel_payload = {}
+    for api_name, resp in api_results.items():
     # If API returned { success, data }
-            if isinstance(resp, dict) and isinstance(resp.get("data"), list):
-                excel_payload[api_name] = resp["data"]
+        if isinstance(resp, dict) and isinstance(resp.get("data"), list):
+            excel_payload[api_name] = resp["data"]
 
             # Fallback to original behavior if nothing matched
-        if not excel_payload:
-            excel_payload = api_results
+    if not excel_payload:
+        excel_payload = api_results
 
         # --------- ADD END ---------
 
