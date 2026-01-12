@@ -68,9 +68,14 @@ def summarize_log_error():
     except Exception:
         return "Error analyzing log file."
 
+print("MODE =", os.getenv("MODE"))
+print("EMAILS =", os.getenv("EMAILS"))
 
 def pick_recipients(all_rec, mode, emails):
-    mode = (mode or "").lower()
+    if not mode:
+        raise ValueError("MODE env variable is missing. Use 'all' or 'custom'.")
+
+    mode = mode.lower().strip()
     emails = (emails or "").strip()
 
     if mode == "all":
@@ -78,10 +83,11 @@ def pick_recipients(all_rec, mode, emails):
 
     if mode == "custom":
         if not emails:
-            raise ValueError("For mode=custom, emails are required.")
+            raise ValueError("For MODE=custom, EMAILS must be provided.")
         return [e.strip() for e in emails.split(",") if e.strip()]
 
-    raise ValueError("Invalid mode")
+    raise ValueError(f"Invalid MODE: {mode}. Allowed: all, custom")
+
 
 
 def execute_api_flow(api_flow):
