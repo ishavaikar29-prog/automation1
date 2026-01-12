@@ -40,6 +40,18 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate input dates (ISO format)
+        run: |
+          set -e
+          validate_date() { date -d "$1" +"%Y-%m-%d" >/dev/null 2>&1; }
+
+          [ -z "$START_DATE" ] || validate_date "$START_DATE" || exit 1
+          [ -z "$END_DATE" ] || validate_date "$END_DATE" || exit 1
+          [ -z "$START_DATE" ] || [ -z "$END_DATE" ] || [ "$START_DATE" \> "$END_DATE" ] && exit 1
+        env:
+          START_DATE: ${{ github.event.inputs.startDate }}
+          END_DATE: ${{ github.event.inputs.endDate }}
+
       - run: pip install -r requirements.txt
 
       - run: python report_parent.py
