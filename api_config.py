@@ -2,7 +2,7 @@ API_FLOW_CONFIG = [
     {
         "name": "login",
         "method": "POST",
-        "endpoint": "/v1/token",
+        "endpoint": "/api/v1/token",
         "body": {
             "userId": "{userId}",
             "password": "{password}",
